@@ -9,7 +9,7 @@ import { listOwners, listTeams } from './hubspot.js';
  *  - ownerId — the value stored in bdr / account_manager / hubspot_owner_id.
  * Teams list members by userId; we bridge to ownerId via the owners list.
  */
-const TTL_MS = 5 * 60 * 1000;
+const TTL_MS = 30 * 60 * 1000; // refetch teams/owners at most every 30 min to conserve daily API quota
 let cache = { at: 0, data: null };
 
 async function build() {
