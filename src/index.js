@@ -6,6 +6,7 @@ import { verifySignature, dispatchEvents } from './webhooks.js';
 import { processDueReverts } from './revertQueue.js';
 import { runDailyReassignment } from './function3.js';
 import { ensureInbound } from './function2.js';
+import { getTeamDiagnostics } from './teams.js';
 import { extractDealIdFromUrl } from './util.js';
 import { dashboardHtml } from './ui.js';
 
@@ -67,6 +68,15 @@ app.post('/api/pin', requirePassword, async (req, res) => {
 app.post('/api/unpin', requirePassword, async (req, res) => {
   await unpinDeal(String(req.body?.dealId || ''));
   res.json({ ok: true });
+});
+
+// read-only diagnostics: verifies HubSpot token + team resolution (changes nothing)
+app.get('/api/diag', requirePassword, async (_req, res) => {
+  try {
+    res.json({ ok: true, ...(await getTeamDiagnostics()) });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // manual trigger for Function 3 (handy for testing)

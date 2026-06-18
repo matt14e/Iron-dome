@@ -47,6 +47,8 @@ async function build() {
   const techUserIds = memberUserIds(tech);
 
   return {
+    corpFound: !!corp,
+    techFound: !!tech,
     corpUserIds, // actor checks for Function 1
     corpOwnerIds: toOwnerIds(corpUserIds), // value checks for Function 1
     techOwnerIds: toOwnerIds(techUserIds), // deal-ownership checks for Functions 2 & 3
@@ -74,4 +76,15 @@ export async function isCorgiTechOwner(ownerId) {
 }
 export async function corgiTechOwnerIds() {
   return [...(await get()).techOwnerIds];
+}
+
+/** Read-only diagnostics: confirms HubSpot token works and both teams resolve. */
+export async function getTeamDiagnostics() {
+  cache = { at: 0, data: null }; // force a fresh fetch
+  const d = await get();
+  return {
+    corgiCorp: { found: d.corpFound, members: d.corpUserIds.size, owners: d.corpOwnerIds.size },
+    corgiTech: { found: d.techFound, owners: d.techOwnerIds.size },
+    emilyInCorgiTech: d.techOwnerIds.has('161706311'),
+  };
 }
