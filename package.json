@@ -1,0 +1,19 @@
+{
+  "name": "corgi-hubspot-bot",
+  "version": "1.0.0",
+  "description": "Watches HubSpot deals and enforces three Corgi rules (role lock, inbound source, daily reassignment).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "pg": "^8.12.0"
+  }
+}
