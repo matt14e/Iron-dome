@@ -1,11 +1,11 @@
 import express from 'express';
 import cron from 'node-cron';
-import { config, FN3_CRON, TIMEZONE, REVERT_LOOP_MS, TOGGLES } from './config.js';
+import { config, FN3_CRON, TIMEZONE, REVERT_LOOP_MS, SWEEP_INTERVAL_MS, TOGGLES } from './config.js';
 import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit } from './db.js';
 import { verifySignature, dispatchEvents } from './webhooks.js';
 import { processDueReverts } from './revertQueue.js';
 import { runDailyReassignment } from './function3.js';
-import { ensureInbound } from './function2.js';
+import { ensureInbound, sweepInbound } from './function2.js';
 import { getTeamDiagnostics } from './teams.js';
 import { extractDealIdFromUrl } from './util.js';
 import { dashboardHtml } from './ui.js';
@@ -70,6 +70,16 @@ app.post('/api/unpin', requirePassword, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Function 2 sweep: preview (changes nothing) and apply (forces qualifying deals to Inbound)
+app.get('/api/sweep/preview', requirePassword, async (_req, res) => {
+  try { res.json(await sweepInbound({ apply: false })); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/sweep/apply', requirePassword, async (_req, res) => {
+  try { res.json(await sweepInbound({ apply: true })); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // read-only diagnostics: verifies HubSpot token + team resolution (changes nothing)
 app.get('/api/diag', requirePassword, async (_req, res) => {
   try {
@@ -90,6 +100,15 @@ async function main() {
 
   // 60s enforcement loop (drains pending reverts as they come due)
   setInterval(() => { processDueReverts().catch((e) => console.error('[loop] revert error:', e.message)); }, REVERT_LOOP_MS);
+
+  // proactive Function 2 sweep — only runs while Function 2 is enabled
+  setInterval(async () => {
+    try {
+      if (!(await isEnabled(TOGGLES.fn2))) return;
+      const r = await sweepInbound({ apply: true });
+      if (r.applied) console.log(`[sweep] forced ${r.applied}/${r.count} deals to Inbound`);
+    } catch (e) { console.error('[sweep] error:', e.message); }
+  }, SWEEP_INTERVAL_MS);
 
   // daily reassignment at 22:00 America/Denver
   cron.schedule(FN3_CRON, () => { runDailyReassignment({ trigger: 'cron' }).catch((e) => console.error('[cron] fn3 error:', e.message)); },

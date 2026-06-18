@@ -49,6 +49,13 @@ export const dashboardHtml = `<!doctype html>
     </div>
 
     <div class="card">
+      <h3>Inbound sweep (Function 2)</h3>
+      <p class="muted">Find Corgi Tech deals sourced from Tail / Deep River that aren't marked Inbound. Preview shows what would change; Apply sets them to Inbound now.</p>
+      <p><button class="secondary" onclick="previewSweep()">Preview (dry run)</button> <button onclick="applySweep()">Apply</button></p>
+      <div id="sweep"></div>
+    </div>
+
+    <div class="card">
       <h3>Recent activity</h3>
       <table id="log"><tbody></tbody></table>
     </div>
@@ -73,6 +80,9 @@ async function toggle(key){ const res=await api('/api/status'); const s=await re
 async function saveCount(){ await api('/api/toggle',{method:'POST',body:JSON.stringify({key:'function3_daily_count',value:document.getElementById('cnt').value})}); refresh(); }
 async function pin(){ const url=document.getElementById('url').value; const res=await api('/api/pin',{method:'POST',body:JSON.stringify({url})}); const j=await res.json(); if(!res.ok) alert(j.error||'failed'); document.getElementById('url').value=''; refresh(); }
 async function unpin(id){ await api('/api/unpin',{method:'POST',body:JSON.stringify({dealId:id})}); refresh(); }
+async function previewSweep(){ document.getElementById('sweep').textContent='Scanning…'; const r=await api('/api/sweep/preview'); renderSweep(await r.json(), false); }
+async function applySweep(){ if(!confirm('Force all matching deals to Inbound now?')) return; document.getElementById('sweep').textContent='Applying…'; const r=await api('/api/sweep/apply',{method:'POST'}); renderSweep(await r.json(), true); refresh(); }
+function renderSweep(j, applied){ const el=document.getElementById('sweep'); if(j.error){ el.textContent='Error: '+j.error; return; } const rows=(j.candidates||[]).slice(0,50).map(c=>'<tr><td>'+c.id+'</td><td>'+c.name+'</td><td>'+(c.currentSource||'(none)')+'</td></tr>').join(''); const head = applied ? ('Applied to '+j.applied+' of '+j.count+' deal(s)') : (j.count+' deal(s) would be set to Inbound'); el.innerHTML='<p><b>'+head+'</b></p>'+(rows?'<table><thead><tr><th>ID</th><th>Deal</th><th>Current source</th></tr></thead><tbody>'+rows+'</tbody></table>'+(j.count>50?'<p class="muted">(showing first 50)</p>':''):''); }
 setInterval(()=>{ if(PW) refresh(); }, 15000);
 </script>
 </body>

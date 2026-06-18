@@ -2,8 +2,8 @@ import {
   SOURCE_PROP, INBOUND_VALUE, REVERT_DELAY_MS, TOGGLES,
   INBOUND_INTEGRATION_APP_IDS, INBOUND_INTEGRATION_NAMES,
 } from './config.js';
-import { getDeal, getObject, getAssociatedIds, updateDeal } from './hubspot.js';
-import { isCorgiTechOwner } from './teams.js';
+import { getDeal, getObject, getAssociatedIds, updateDeal, searchDeals } from './hubspot.js';
+import { isCorgiTechOwner, corgiTechOwnerIds } from './teams.js';
 import { enqueueRevert, isEnabled, isPinned, logAction } from './db.js';
 import { markSelfWrite, wasSelfWrite } from './selfWrites.js';
 
@@ -60,6 +60,64 @@ export async function ensureInbound(dealId) {
   await logAction({ fn: 'fn2', dealId, property: SOURCE_PROP, oldValue: current, newValue: INBOUND_VALUE, note: 'set inbound' });
   console.log(`[fn2] set deal ${dealId} source ${current} -> Inbound`);
   return true;
+}
+
+/**
+ * Proactive sweep: find Corgi Tech deals that are Tail/Deep-River-sourced but NOT marked Inbound,
+ * and (optionally) set them. Uses deal-level source signals so it stays a cheap paginated search
+ * rather than per-deal association lookups.
+ *
+ * Note: this catches deals whose own source fields carry the integration signal (HubSpot propagates
+ * a contact's analytics source onto the deal). Rare deals where ONLY an associated company/contact
+ * carries the signal — with nothing on the deal — are still handled reactively (on source change/pin),
+ * just not by this sweep.
+ *
+ * @param {{apply?: boolean}} opts - apply=false returns a preview (changes nothing).
+ */
+export async function sweepInbound({ apply = false } = {}) {
+  const techOwners = await corgiTechOwnerIds();
+  if (techOwners.length === 0) return { apply, count: 0, candidates: [] };
+
+  const appIds = [...INBOUND_INTEGRATION_APP_IDS];
+  const filterGroups = [
+    { filters: [
+      { propertyName: 'hubspot_owner_id', operator: 'IN', values: techOwners },
+      { propertyName: 'hs_analytics_source_data_2', operator: 'IN', values: appIds },
+    ] },
+    { filters: [
+      { propertyName: 'hubspot_owner_id', operator: 'IN', values: techOwners },
+      { propertyName: 'hs_object_source_detail_1', operator: 'IN', values: ['Tail', 'Deep-River'] },
+    ] },
+  ];
+  const props = ['dealname', SOURCE_PROP, 'hubspot_owner_id', ...SOURCE_FIELDS];
+
+  const found = new Map();
+  let after;
+  do {
+    const page = await searchDeals(filterGroups, props, 100, after);
+    for (const d of page.results || []) found.set(d.id, d);
+    after = page.paging?.next?.after;
+  } while (after && found.size < 10000);
+
+  // Only those not already Inbound need fixing.
+  const candidates = [...found.values()]
+    .filter((d) => (d.properties[SOURCE_PROP] || '') !== INBOUND_VALUE)
+    .map((d) => ({ id: d.id, name: d.properties.dealname || '', currentSource: d.properties[SOURCE_PROP] || null }));
+
+  if (!apply) return { apply: false, count: candidates.length, candidates };
+
+  let applied = 0;
+  for (const c of candidates) {
+    try {
+      await updateDeal(c.id, { [SOURCE_PROP]: INBOUND_VALUE });
+      markSelfWrite(c.id, SOURCE_PROP, INBOUND_VALUE);
+      await logAction({ fn: 'fn2', dealId: c.id, property: SOURCE_PROP, oldValue: c.currentSource, newValue: INBOUND_VALUE, note: 'sweep set inbound' });
+      applied++;
+    } catch (e) {
+      console.error(`[sweep] failed on deal ${c.id}:`, e.message);
+    }
+  }
+  return { apply: true, count: candidates.length, applied };
 }
 
 /** Webhook: source changed. If a qualifying deal moved off Inbound, queue a revert. */

@@ -40,6 +40,7 @@ export const TIMEZONE = 'America/Denver';
 export const FN3_CRON = '0 22 * * *'; // 10:00 PM America/Denver
 export const REVERT_DELAY_MS = 60 * 1000; // enforce "within 1 minute"
 export const REVERT_LOOP_MS = 15 * 1000; // how often we drain the revert queue
+export const SWEEP_INTERVAL_MS = 5 * 60 * 1000; // Function 2 proactive sweep cadence (when enabled)
 
 /** Feature toggle keys (stored in DB `config` table). */
 export const TOGGLES = {
