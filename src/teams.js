@@ -84,7 +84,7 @@ export async function getTeamDiagnostics() {
   const d = await get();
   return {
     corgiCorp: { found: d.corpFound, members: d.corpUserIds.size, owners: d.corpOwnerIds.size },
-    corgiTech: { found: d.techFound, owners: d.techOwnerIds.size },
+    corgiTech: { found: d.techFound, owners: d.techOwnerIds.size, ownerIds: [...d.techOwnerIds] },
     emilyInCorgiTech: d.techOwnerIds.has('161706311'),
   };
 }
