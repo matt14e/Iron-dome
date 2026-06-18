@@ -2,9 +2,17 @@ import pg from 'pg';
 import { config, TOGGLES, FN3_DEFAULT_DAILY_COUNT } from './config.js';
 
 const { Pool } = pg;
+
+// Railway's internal DATABASE_URL connects over the private network WITHOUT SSL. Only enable
+// SSL when the connection string explicitly asks for it (e.g. a public URL with sslmode=require).
+function sslFor(url) {
+  if (!url) return false;
+  return /sslmode=require/i.test(url) ? { rejectUnauthorized: false } : false;
+}
+
 export const pool = new Pool({
   connectionString: config.databaseUrl,
-  ssl: config.databaseUrl?.includes('localhost') ? false : { rejectUnauthorized: false },
+  ssl: sslFor(config.databaseUrl),
 });
 
 /** Create tables and seed default config on boot. */
