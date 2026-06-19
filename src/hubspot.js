@@ -33,6 +33,11 @@ export function getDealPropertyHistory(id, property) {
   return hs(`/crm/v3/objects/deals/${id}`, { query: { propertiesWithHistory: property } });
 }
 
+/** Fetch multiple properties WITH history in one call (for diagnostics). */
+export function getDealHistory(id, properties) {
+  return hs(`/crm/v3/objects/deals/${id}`, { query: { propertiesWithHistory: properties.join(',') } });
+}
+
 /** Patch deal properties. Pass { prop: null } to clear a field. */
 export function updateDeal(id, properties) {
   return hs(`/crm/v3/objects/deals/${id}`, { method: 'PATCH', body: { properties } });

@@ -7,6 +7,7 @@ import { processDueReverts } from './revertQueue.js';
 import { runDailyReassignment } from './function3.js';
 import { ensureInbound, sweepInbound } from './function2.js';
 import { getTeamDiagnostics } from './teams.js';
+import { getDealHistory } from './hubspot.js';
 import { extractDealIdFromUrl } from './util.js';
 import { dashboardHtml } from './ui.js';
 
@@ -86,6 +87,25 @@ app.get('/api/diag', requirePassword, async (_req, res) => {
     res.json({ ok: true, ...(await getTeamDiagnostics()) });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// read-only: who/what changed the role fields on a deal (source of each change)
+app.get('/api/history', requirePassword, async (req, res) => {
+  const dealId = String(req.query.dealId || '');
+  if (!dealId) return res.status(400).json({ error: 'dealId required' });
+  try {
+    const data = await getDealHistory(dealId, ['hubspot_owner_id', 'account_manager', 'bdr']);
+    const h = data.propertiesWithHistory || {};
+    const out = {};
+    for (const k of Object.keys(h)) {
+      out[k] = h[k].slice(0, 15).map((e) => ({
+        value: e.value, timestamp: e.timestamp, sourceType: e.sourceType, sourceId: e.sourceId, sourceLabel: e.sourceLabel,
+      }));
+    }
+    res.json({ dealId, history: out });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
