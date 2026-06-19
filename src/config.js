@@ -25,6 +25,11 @@ export const INBOUND_VALUE = 'Inbound';
 /** Emily Yuan — target of Function 3. */
 export const EMILY_OWNER_ID = '161706311';
 
+/** This bot's own HubSpot application ID — used to ignore our own writes in enemy detection. */
+export const OUR_APP_ID = '35562869';
+/** Enemy-watch proactive scan cadence. */
+export const ENEMY_WATCH_MS = 60 * 60 * 1000;
+
 /** Inbound integration signals. App ID (primary) survives indirect record creation. */
 export const INBOUND_INTEGRATION_APP_IDS = new Set(['31988037' /* Tail */, '35918668' /* Deep River */]);
 export const INBOUND_INTEGRATION_NAMES = new Set(['tail', 'deep-river', 'deep river']); // lower-cased, backup signal

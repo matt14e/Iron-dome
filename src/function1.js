@@ -1,7 +1,7 @@
-import { ROLE_PROPS, REVERT_DELAY_MS, TOGGLES } from './config.js';
+import { ROLE_PROPS, REVERT_DELAY_MS, TOGGLES, OUR_APP_ID } from './config.js';
 import { getDealPropertyHistory } from './hubspot.js';
 import { isCorgiCorpActor, isCorgiCorpOwnerValue } from './teams.js';
-import { enqueueRevert, isEnabled } from './db.js';
+import { enqueueRevert, isEnabled, recordEnemy } from './db.js';
 import { wasSelfWrite } from './selfWrites.js';
 
 /**
@@ -37,4 +37,13 @@ export async function handleRoleChange({ dealId, property, newValue, actorUserId
     dueAt: new Date(Date.now() + REVERT_DELAY_MS),
   });
   console.log(`[fn1] queued revert deal ${dealId} ${property} -> ${prevValue} (actor ${actor})`);
+
+  // Passive enemy detection: if an integration made the displacing change, record it.
+  if (latest?.sourceType === 'INTEGRATION' && String(latest.sourceId) !== OUR_APP_ID) {
+    try {
+      if (await recordEnemy(latest.sourceId, dealId)) {
+        console.warn(`[enemy] NEW integration reassigning Corgi Corp deals: app ${latest.sourceId}`);
+      }
+    } catch (e) { console.error('[enemy] record failed:', e.message); }
+  }
 }

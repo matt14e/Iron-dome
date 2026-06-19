@@ -56,6 +56,13 @@ export async function initDb() {
       note       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS detected_enemies (
+      app_id      TEXT PRIMARY KEY,          -- HubSpot application id reassigning Corgi Corp deals
+      hits        INTEGER NOT NULL DEFAULT 0,
+      sample_deal TEXT,
+      first_seen  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      last_seen   TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
 
   // Seed defaults (only if missing)
@@ -169,5 +176,22 @@ export async function logAction(entry) {
 }
 export async function recentAudit(limit = 100) {
   const { rows } = await pool.query(`SELECT * FROM audit_log ORDER BY created_at DESC LIMIT $1`, [limit]);
+  return rows;
+}
+
+// --- Enemy detection ---
+/** Record an attacking app id; returns true if this app was newly detected (first time). */
+export async function recordEnemy(appId, dealId) {
+  const { rows } = await pool.query(
+    `INSERT INTO detected_enemies (app_id, hits, sample_deal) VALUES ($1, 1, $2)
+       ON CONFLICT (app_id) DO UPDATE SET hits = detected_enemies.hits + 1, last_seen = now(),
+         sample_deal = COALESCE(EXCLUDED.sample_deal, detected_enemies.sample_deal)
+     RETURNING (xmax = 0) AS inserted`,
+    [String(appId), dealId ? String(dealId) : null],
+  );
+  return rows[0]?.inserted === true;
+}
+export async function listEnemies() {
+  const { rows } = await pool.query(`SELECT * FROM detected_enemies ORDER BY last_seen DESC`);
   return rows;
 }

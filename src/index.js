@@ -1,7 +1,8 @@
 import express from 'express';
 import cron from 'node-cron';
-import { config, FN3_CRON, TIMEZONE, REVERT_LOOP_MS, SWEEP_INTERVAL_MS, TOGGLES } from './config.js';
-import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit, backfillSummary } from './db.js';
+import { config, FN3_CRON, TIMEZONE, REVERT_LOOP_MS, SWEEP_INTERVAL_MS, ENEMY_WATCH_MS, TOGGLES } from './config.js';
+import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit, backfillSummary, listEnemies } from './db.js';
+import { scanForEnemies } from './enemyWatch.js';
 import { verifySignature, dispatchEvents } from './webhooks.js';
 import { processDueReverts } from './revertQueue.js';
 import { runDailyReassignment } from './function3.js';
@@ -45,7 +46,17 @@ app.get('/api/status', requirePassword, async (_req, res) => {
     },
     pinned: await listPinned(),
     audit: await recentAudit(100),
+    enemies: await listEnemies(),
   });
+});
+
+// enemy detection: list detected attackers + run a proactive scan on demand
+app.get('/api/enemies', requirePassword, async (_req, res) => {
+  res.json(await listEnemies());
+});
+app.post('/api/enemy-scan', requirePassword, async (req, res) => {
+  try { res.json(await scanForEnemies({ limit: Math.min(Number(req.query.limit || 80), 150) })); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/toggle', requirePassword, async (req, res) => {
@@ -180,6 +191,11 @@ async function main() {
       if (r.applied) console.log(`[sweep] forced ${r.applied}/${r.count} deals to Inbound`);
     } catch (e) { console.error('[sweep] error:', e.message); }
   }, SWEEP_INTERVAL_MS);
+
+  // proactive enemy watch — flags any integration reassigning Corgi Corp deals (early warning)
+  setInterval(() => {
+    scanForEnemies({}).catch((e) => console.error('[enemy-watch] error:', e.message));
+  }, ENEMY_WATCH_MS);
 
   // daily reassignment at 22:00 America/Denver
   cron.schedule(FN3_CRON, () => { runDailyReassignment({ trigger: 'cron' }).catch((e) => console.error('[cron] fn3 error:', e.message)); },

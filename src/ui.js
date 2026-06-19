@@ -56,6 +56,12 @@ export const dashboardHtml = `<!doctype html>
     </div>
 
     <div class="card">
+      <h3>⚠️ Detected enemy integrations</h3>
+      <p class="muted">Apps caught reassigning Corgi Corp deals. <button class="secondary" onclick="enemyScan()">Scan now</button></p>
+      <table id="enemies"><tbody></tbody></table>
+    </div>
+
+    <div class="card">
       <h3>Recent activity</h3>
       <table id="log"><tbody></tbody></table>
     </div>
@@ -73,8 +79,13 @@ async function refresh(){
   document.getElementById('pins').innerHTML = s.pinned.map(p => '<span class="pill">'+p.deal_id+' <a href="#" onclick="unpin(\\''+p.deal_id+'\\')">✕</a></span>').join(' ') || '<span class="muted">none</span>';
   document.getElementById('log').querySelector('tbody').innerHTML = s.audit.map(a =>
     '<tr><td>'+new Date(a.created_at).toLocaleString()+'</td><td><b>'+a.fn+'</b></td><td>'+(a.deal_id||'')+'</td><td>'+(a.note||'')+'</td></tr>').join('');
+  const en = s.enemies || [];
+  document.getElementById('enemies').querySelector('tbody').innerHTML = en.length
+    ? en.map(e => '<tr><td><b>app '+e.app_id+'</b></td><td>'+e.hits+' hits</td><td>last: '+new Date(e.last_seen).toLocaleString()+'</td><td>'+(e.sample_deal||'')+'</td></tr>').join('')
+    : '<tr><td class="muted">none detected</td></tr>';
   return true;
 }
+async function enemyScan(){ await api('/api/enemy-scan',{method:'POST'}); refresh(); }
 function setBtn(id, on){ const b=document.getElementById(id); b.textContent = on?'ON':'OFF'; b.style.background = on?'#1db954':'#e3e3e6'; b.style.color = on?'#fff':'#1d1d1f'; }
 async function toggle(key){ const res=await api('/api/status'); const s=await res.json(); const next = !s.config[key]; await api('/api/toggle',{method:'POST',body:JSON.stringify({key,value:next})}); refresh(); }
 async function saveCount(){ await api('/api/toggle',{method:'POST',body:JSON.stringify({key:'function3_daily_count',value:document.getElementById('cnt').value})}); refresh(); }
