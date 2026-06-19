@@ -113,7 +113,7 @@ exact prior value. Edits by Corgi Corp members are always allowed.
 - stage is **Closed Won** (`closedwon`) — the old "Contract Signed" stage was deleted and leaves no
   detectable date property, so it's excluded for now (optional future enhancement via stage-history), and
 - `hs_v2_date_entered_closedwon` (date **first moved** to Closed Won) is in the **current calendar month**
-  (America/Denver), and
+  (US/Eastern, the account time zone), and
 - that move was **≥ 2 days ago** (relative to run time), and
 - not already fully assigned to Emily across all three fields.
 
