@@ -83,7 +83,7 @@ export async function getTeamDiagnostics() {
   cache = { at: 0, data: null }; // force a fresh fetch
   const d = await get();
   return {
-    corgiCorp: { found: d.corpFound, members: d.corpUserIds.size, owners: d.corpOwnerIds.size },
+    corgiCorp: { found: d.corpFound, members: d.corpUserIds.size, owners: d.corpOwnerIds.size, ownerIds: [...d.corpOwnerIds] },
     corgiTech: { found: d.techFound, owners: d.techOwnerIds.size, ownerIds: [...d.techOwnerIds] },
     emilyInCorgiTech: d.techOwnerIds.has('161706311'),
   };
