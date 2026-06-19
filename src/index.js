@@ -3,6 +3,7 @@ import cron from 'node-cron';
 import { config, FN3_CRON, TIMEZONE, REVERT_LOOP_MS, SWEEP_INTERVAL_MS, ENEMY_WATCH_MS, TOGGLES } from './config.js';
 import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit, backfillSummary, listEnemies } from './db.js';
 import { scanForEnemies } from './enemyWatch.js';
+import { startDossier, getDossierState } from './dossier.js';
 import { verifySignature, dispatchEvents } from './webhooks.js';
 import { processDueReverts } from './revertQueue.js';
 import { runDailyReassignment } from './function3.js';
@@ -49,6 +50,14 @@ app.get('/api/status', requirePassword, async (_req, res) => {
     enemies: await listEnemies(),
   });
 });
+
+// dossier: one-off scan of a specific app's corp->tech owner reassignments (start + status)
+app.post('/api/dossier/start', requirePassword, async (req, res) => {
+  const appId = String(req.query.appId || '36669355');
+  const sinceMs = Number(req.query.since || 1775001600000); // default: 2026-04-01 UTC
+  res.json(await startDossier({ appId, sinceMs, nowMs: Date.now() }));
+});
+app.get('/api/dossier/status', requirePassword, (_req, res) => res.json(getDossierState()));
 
 // enemy detection: list detected attackers + run a proactive scan on demand
 app.get('/api/enemies', requirePassword, async (_req, res) => {
