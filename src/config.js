@@ -31,6 +31,10 @@ export const INBOUND_INTEGRATION_NAMES = new Set(['tail', 'deep-river', 'deep ri
 
 /** Function 3 eligibility. */
 export const FN3_ELIGIBLE_STAGE = 'closedwon';
+
+/** Function 1 one-time backfill scope (deals first closed-won in this month). */
+export const FN1_BACKFILL_YEAR = 2026;
+export const FN1_BACKFILL_MONTH = 5; // May (expandable later)
 export const FN3_STAGE_ENTERED_DATE_PROP = 'hs_v2_date_entered_closedwon';
 export const FN3_MIN_AGE_DAYS = 2;
 export const FN3_DEFAULT_DAILY_COUNT = 10;
@@ -38,7 +42,7 @@ export const FN3_DEFAULT_DAILY_COUNT = 10;
 /** Scheduling / timing. */
 export const TIMEZONE = 'America/New_York'; // US/Eastern — matches the HubSpot account time zone
 export const FN3_CRON = '0 22 * * *'; // 10:00 PM US/Eastern
-export const REVERT_DELAY_MS = 60 * 1000; // enforce "within 1 minute"
+export const REVERT_DELAY_MS = 20 * 1000; // aggressive: revert ~20s after an offending change
 export const REVERT_LOOP_MS = 15 * 1000; // how often we drain the revert queue
 export const SWEEP_INTERVAL_MS = 30 * 60 * 1000; // Function 2 proactive sweep cadence (when enabled) — kept long to conserve the account-wide daily API quota
 

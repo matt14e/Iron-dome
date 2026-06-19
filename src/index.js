@@ -8,6 +8,7 @@ import { runDailyReassignment } from './function3.js';
 import { ensureInbound, sweepInbound } from './function2.js';
 import { getTeamDiagnostics } from './teams.js';
 import { getDealHistory, searchDeals } from './hubspot.js';
+import { backfillFn1 } from './function1Backfill.js';
 import { extractDealIdFromUrl } from './util.js';
 import { dashboardHtml } from './ui.js';
 
@@ -88,6 +89,16 @@ app.get('/api/diag', requirePassword, async (_req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// Function 1 backfill: dry-run preview (read-only) and apply
+app.get('/api/backfill/preview', requirePassword, async (_req, res) => {
+  try { res.json(await backfillFn1({ apply: false })); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/backfill/apply', requirePassword, async (_req, res) => {
+  try { res.json(await backfillFn1({ apply: true })); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // read-only: scan recent deals to profile what a given integration app does to the role fields

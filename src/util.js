@@ -30,6 +30,17 @@ export function startOfMonthMs(timeZone, now = new Date()) {
   return naiveUTC - offset * 60000;
 }
 
+/** [startMs, endMs) for a given calendar month (month is 1-12) in `timeZone`. */
+export function monthBoundsMs(year, month, timeZone) {
+  const startNaive = Date.UTC(year, month - 1, 1);
+  const start = startNaive - tzOffsetMinutes(new Date(startNaive), timeZone) * 60000;
+  const ny = month === 12 ? year + 1 : year;
+  const nm = month === 12 ? 0 : month;
+  const endNaive = Date.UTC(ny, nm, 1);
+  const end = endNaive - tzOffsetMinutes(new Date(endNaive), timeZone) * 60000;
+  return [start, end];
+}
+
 /** Extract the numeric deal ID from a pasted HubSpot deal URL. */
 export function extractDealIdFromUrl(input) {
   const s = String(input).trim();

@@ -78,6 +78,10 @@ export async function corgiTechOwnerIds() {
   return [...(await get()).techOwnerIds];
 }
 
+export async function corgiCorpOwnerIds() {
+  return [...(await get()).corpOwnerIds];
+}
+
 /** Read-only diagnostics: confirms HubSpot token works and both teams resolve. */
 export async function getTeamDiagnostics() {
   cache = { at: 0, data: null }; // force a fresh fetch
