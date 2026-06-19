@@ -142,7 +142,7 @@ export async function backfillSummary() {
             count(*) FILTER (WHERE applied)::int AS applied FROM backfill_changes`,
   );
   const { rows: sample } = await pool.query(
-    `SELECT deal_id, name, field, from_val, to_val FROM backfill_changes ORDER BY id LIMIT 25`,
+    `SELECT deal_id, name, field, from_val, to_val FROM backfill_changes ORDER BY id LIMIT 1000`,
   );
   return { ...c[0], sample };
 }
