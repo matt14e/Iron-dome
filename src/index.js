@@ -8,7 +8,7 @@ import { runDailyReassignment } from './function3.js';
 import { ensureInbound, sweepInbound } from './function2.js';
 import { getTeamDiagnostics } from './teams.js';
 import { getDealHistory, searchDeals } from './hubspot.js';
-import { backfillFn1 } from './function1Backfill.js';
+import { backfillFn1Page } from './function1Backfill.js';
 import { extractDealIdFromUrl } from './util.js';
 import { dashboardHtml } from './ui.js';
 
@@ -92,12 +92,12 @@ app.get('/api/diag', requirePassword, async (_req, res) => {
 });
 
 // Function 1 backfill: dry-run preview (read-only) and apply
-app.get('/api/backfill/preview', requirePassword, async (_req, res) => {
-  try { res.json(await backfillFn1({ apply: false })); }
+app.get('/api/backfill/preview', requirePassword, async (req, res) => {
+  try { res.json(await backfillFn1Page({ apply: false, after: req.query.after })); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post('/api/backfill/apply', requirePassword, async (_req, res) => {
-  try { res.json(await backfillFn1({ apply: true })); }
+app.post('/api/backfill/apply', requirePassword, async (req, res) => {
+  try { res.json(await backfillFn1Page({ apply: true, after: req.query.after })); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
