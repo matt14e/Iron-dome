@@ -101,6 +101,7 @@ app.get('/api/scan-integration', requirePassword, async (req, res) => {
     const deals = search.results || [];
     const valueCounts = {}; // ownerId set by this app -> count
     const fieldCounts = {}; // which role fields the app touches
+    const events = []; // { deal, field, value, ts } for cadence analysis
     const touched = [];
     for (const d of deals) {
       const data = await getDealHistory(d.id, fields);
@@ -112,12 +113,13 @@ app.get('/api/scan-integration', requirePassword, async (req, res) => {
             hit = true;
             valueCounts[e.value] = (valueCounts[e.value] || 0) + 1;
             fieldCounts[f] = (fieldCounts[f] || 0) + 1;
+            if (events.length < 1000) events.push({ deal: d.id, field: f, value: e.value, ts: e.timestamp });
           }
         }
       }
       if (hit) touched.push(d.id);
     }
-    res.json({ appId, sampledDeals: deals.length, dealsTouched: touched.length, fieldCounts, valueCounts, sampleTouchedIds: touched.slice(0, 25) });
+    res.json({ appId, sampledDeals: deals.length, dealsTouched: touched.length, fieldCounts, valueCounts, events, sampleTouchedIds: touched.slice(0, 25) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
