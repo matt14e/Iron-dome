@@ -55,10 +55,10 @@ export async function getAssociatedIds(dealId, toObjectType) {
 }
 
 /** Search deals. filterGroups per HubSpot search API. */
-export function searchDeals(filterGroups, properties, limit = 100, after) {
+export function searchDeals(filterGroups, properties, limit = 100, after, sorts) {
   return hs(`/crm/v3/objects/deals/search`, {
     method: 'POST',
-    body: { filterGroups, properties, limit, after },
+    body: { filterGroups, properties, limit, after, ...(sorts ? { sorts } : {}) },
   });
 }
 

@@ -7,7 +7,7 @@ import { processDueReverts } from './revertQueue.js';
 import { runDailyReassignment } from './function3.js';
 import { ensureInbound, sweepInbound } from './function2.js';
 import { getTeamDiagnostics } from './teams.js';
-import { getDealHistory } from './hubspot.js';
+import { getDealHistory, searchDeals } from './hubspot.js';
 import { extractDealIdFromUrl } from './util.js';
 import { dashboardHtml } from './ui.js';
 
@@ -87,6 +87,39 @@ app.get('/api/diag', requirePassword, async (_req, res) => {
     res.json({ ok: true, ...(await getTeamDiagnostics()) });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// read-only: scan recent deals to profile what a given integration app does to the role fields
+app.get('/api/scan-integration', requirePassword, async (req, res) => {
+  const appId = String(req.query.appId || '36669355');
+  const limit = Math.min(Number(req.query.limit || 60), 100);
+  const fields = ['hubspot_owner_id', 'account_manager', 'bdr'];
+  try {
+    const search = await searchDeals([], ['dealname', 'hubspot_owner_id'], limit, undefined,
+      [{ propertyName: 'hs_lastmodifieddate', direction: 'DESCENDING' }]);
+    const deals = search.results || [];
+    const valueCounts = {}; // ownerId set by this app -> count
+    const fieldCounts = {}; // which role fields the app touches
+    const touched = [];
+    for (const d of deals) {
+      const data = await getDealHistory(d.id, fields);
+      const h = data.propertiesWithHistory || {};
+      let hit = false;
+      for (const f of fields) {
+        for (const e of (h[f] || [])) {
+          if (e.sourceType === 'INTEGRATION' && String(e.sourceId) === appId) {
+            hit = true;
+            valueCounts[e.value] = (valueCounts[e.value] || 0) + 1;
+            fieldCounts[f] = (fieldCounts[f] || 0) + 1;
+          }
+        }
+      }
+      if (hit) touched.push(d.id);
+    }
+    res.json({ appId, sampledDeals: deals.length, dealsTouched: touched.length, fieldCounts, valueCounts, sampleTouchedIds: touched.slice(0, 25) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
