@@ -2,7 +2,7 @@ import { config } from './config.js';
 
 const BASE = 'https://api.hubapi.com';
 
-async function hs(path, { method = 'GET', body, query } = {}) {
+async function hs(path, { method = 'GET', body, query } = {}, _retry = 0) {
   const url = new URL(BASE + path);
   if (query) for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   const res = await fetch(url, {
@@ -15,6 +15,12 @@ async function hs(path, { method = 'GET', body, query } = {}) {
   });
   if (!res.ok) {
     const text = await res.text();
+    // Auto-retry on per-second/burst 429s (but not the DAILY cap — that won't clear by waiting).
+    if (res.status === 429 && _retry < 4 && !/daily/i.test(text)) {
+      const wait = Math.min((Number(res.headers.get('Retry-After')) || 1) * 1000 || 2000, 11000);
+      await new Promise((r) => setTimeout(r, wait));
+      return hs(path, { method, body, query }, _retry + 1);
+    }
     throw new Error(`HubSpot ${method} ${path} -> ${res.status}: ${text}`);
   }
   return res.status === 204 ? null : res.json();

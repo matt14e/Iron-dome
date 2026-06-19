@@ -36,6 +36,15 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       UNIQUE (deal_id, property)
     );
+    CREATE TABLE IF NOT EXISTS backfill_changes (
+      id         BIGSERIAL PRIMARY KEY,
+      deal_id    TEXT NOT NULL,
+      name       TEXT,
+      field      TEXT NOT NULL,
+      from_val   TEXT,
+      to_val     TEXT,
+      applied    BOOLEAN NOT NULL DEFAULT false
+    );
     CREATE TABLE IF NOT EXISTS audit_log (
       id         BIGSERIAL PRIMARY KEY,
       fn         TEXT NOT NULL,              -- 'fn1' | 'fn2' | 'fn3'
@@ -115,6 +124,38 @@ export async function dueReverts() {
 }
 export async function deleteRevert(id) {
   await pool.query(`DELETE FROM pending_reverts WHERE id = $1`, [id]);
+}
+
+// --- Function 1 backfill staging ---
+export async function clearBackfill() {
+  await pool.query(`DELETE FROM backfill_changes`);
+}
+export async function addBackfillChange(c) {
+  await pool.query(
+    `INSERT INTO backfill_changes (deal_id, name, field, from_val, to_val) VALUES ($1, $2, $3, $4, $5)`,
+    [c.deal, c.name ?? null, c.field, c.from ?? null, c.to ?? null],
+  );
+}
+export async function backfillSummary() {
+  const { rows: c } = await pool.query(
+    `SELECT count(*)::int AS changes, count(distinct deal_id)::int AS deals,
+            count(*) FILTER (WHERE applied)::int AS applied FROM backfill_changes`,
+  );
+  const { rows: sample } = await pool.query(
+    `SELECT deal_id, name, field, from_val, to_val FROM backfill_changes ORDER BY id LIMIT 25`,
+  );
+  return { ...c[0], sample };
+}
+export async function pendingBackfillByDeal() {
+  const { rows } = await pool.query(
+    `SELECT deal_id, field, to_val FROM backfill_changes WHERE NOT applied ORDER BY deal_id`,
+  );
+  const byDeal = {};
+  for (const r of rows) (byDeal[r.deal_id] ||= {})[r.field] = r.to_val;
+  return byDeal;
+}
+export async function markBackfillApplied(dealId) {
+  await pool.query(`UPDATE backfill_changes SET applied = true WHERE deal_id = $1`, [dealId]);
 }
 
 // --- Audit log ---

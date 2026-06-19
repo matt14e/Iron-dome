@@ -1,3 +1,5 @@
+export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 /** Uniform Fisher-Yates shuffle (in place, returns the array). */
 export function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {

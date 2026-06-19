@@ -1,14 +1,14 @@
 import express from 'express';
 import cron from 'node-cron';
 import { config, FN3_CRON, TIMEZONE, REVERT_LOOP_MS, SWEEP_INTERVAL_MS, TOGGLES } from './config.js';
-import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit } from './db.js';
+import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit, backfillSummary } from './db.js';
 import { verifySignature, dispatchEvents } from './webhooks.js';
 import { processDueReverts } from './revertQueue.js';
 import { runDailyReassignment } from './function3.js';
 import { ensureInbound, sweepInbound } from './function2.js';
 import { getTeamDiagnostics } from './teams.js';
 import { getDealHistory, searchDeals } from './hubspot.js';
-import { backfillFn1Page } from './function1Backfill.js';
+import { startBackfillScan, getBackfillState, applyBackfill } from './function1Backfill.js';
 import { extractDealIdFromUrl } from './util.js';
 import { dashboardHtml } from './ui.js';
 
@@ -92,12 +92,17 @@ app.get('/api/diag', requirePassword, async (_req, res) => {
 });
 
 // Function 1 backfill: dry-run preview (read-only) and apply
-app.get('/api/backfill/preview', requirePassword, async (req, res) => {
-  try { res.json(await backfillFn1Page({ apply: false, after: req.query.after })); }
+// Function 1 backfill: server-side scan (dry-run staging) -> status -> apply
+app.post('/api/backfill/scan', requirePassword, async (_req, res) => {
+  try { res.json(await startBackfillScan()); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post('/api/backfill/apply', requirePassword, async (req, res) => {
-  try { res.json(await backfillFn1Page({ apply: true, after: req.query.after })); }
+app.get('/api/backfill/status', requirePassword, async (_req, res) => {
+  try { res.json({ state: getBackfillState(), summary: await backfillSummary() }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/backfill/apply', requirePassword, async (_req, res) => {
+  try { res.json(await applyBackfill()); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
