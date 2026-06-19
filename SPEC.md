@@ -74,6 +74,28 @@ exact prior value. Edits by Corgi Corp members are always allowed.
 
 **Toggle:** `function1_enabled`.
 
+### 4a. Function 1 — one-time first-run backfill (run at launch)
+
+A separate, deliberate, **run-once** reconciliation (NOT part of the live webhook path). Restores
+Corgi Corp ownership that was changed away on already-closed deals before the bot was watching.
+
+**For every deal that has reached Closed Won** (`closedwon`; the deleted "Contract Signed" stage
+can't be reliably identified, so it's excluded):
+- For each of the 3 roles (`bdr`, `account_manager`, `hubspot_owner_id`), read the property history.
+- Consider only history entries **at/after** the Closed Won date (`hs_v2_date_entered_closedwon`).
+- A historical value counts as "Corgi Corp" if that owner ID is **currently** a Corgi Corp member.
+- If a Corgi Corp member held the role post-close **and** the role is **currently** held by a
+  **non**-Corgi-Corp person → set the role to the **most recent** post-close Corgi Corp holder.
+- If the role is **currently** held by any Corgi Corp member → leave it unchanged.
+
+**Conflict with Function 3:** none. Fn1 keys off Corgi Corp, Fn3 only moves Corgi Tech-owned deals
+(disjoint teams). Running the backfill first moves Corgi-Corp-historical deals off Corgi Tech
+ownership, so Fn3 won't select them.
+
+**Cost/safety:** API-heavy — ~1 history read per closed-won deal (potentially thousands). Build with a
+**dry-run preview** (report every proposed role change before applying), throttle to respect the
+account-wide daily API limit, and run deliberately with quota headroom.
+
 ---
 
 ## 5. Function 2 — Force Corgi Tech inbound deals to `source = Inbound`
