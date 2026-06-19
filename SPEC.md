@@ -79,22 +79,30 @@ exact prior value. Edits by Corgi Corp members are always allowed.
 A separate, deliberate, **run-once** reconciliation (NOT part of the live webhook path). Restores
 Corgi Corp ownership that was changed away on already-closed deals before the bot was watching.
 
-**For every deal that has reached Closed Won** (`closedwon`; the deleted "Contract Signed" stage
-can't be reliably identified, so it's excluded):
-- For each of the 3 roles (`bdr`, `account_manager`, `hubspot_owner_id`), read the property history.
-- Consider only history entries **at/after** the Closed Won date (`hs_v2_date_entered_closedwon`).
+**Scope (for now): only deals whose FIRST move into Closed Won was in May 2026.** Expandable later —
+keep the month range a config value. (The deleted "Contract Signed" stage can't be reliably
+identified, so it's excluded.)
+
+**Determining the FIRST Closed Won (important):** `hs_v2_date_entered_closedwon` stores only the
+*latest* entry, so it can't identify the first time. Read the `dealstage` **property history** and take
+the **earliest** entry whose value is `closedwon` → that is the first-closed-won timestamp. To limit
+the scan, pre-filter candidates with `hs_v2_date_entered_closedwon >= 2026-05-01` (a superset), then
+confirm via history that the *first* entry falls within **May 2026** (>= May 1, < Jun 1, US/Eastern).
+
+For each qualifying deal, for each of the 3 roles (`bdr`, `account_manager`, `hubspot_owner_id`):
+- Read the role's property history; consider only entries **at/after the first Closed Won timestamp**.
 - A historical value counts as "Corgi Corp" if that owner ID is **currently** a Corgi Corp member.
 - If a Corgi Corp member held the role post-close **and** the role is **currently** held by a
-  **non**-Corgi-Corp person → set the role to the **most recent** post-close Corgi Corp holder.
+  **non**-Corgi-Corp person → set it to the **most recent** post-close Corgi Corp holder.
 - If the role is **currently** held by any Corgi Corp member → leave it unchanged.
 
 **Conflict with Function 3:** none. Fn1 keys off Corgi Corp, Fn3 only moves Corgi Tech-owned deals
 (disjoint teams). Running the backfill first moves Corgi-Corp-historical deals off Corgi Tech
 ownership, so Fn3 won't select them.
 
-**Cost/safety:** API-heavy — ~1 history read per closed-won deal (potentially thousands). Build with a
-**dry-run preview** (report every proposed role change before applying), throttle to respect the
-account-wide daily API limit, and run deliberately with quota headroom.
+**Cost/safety:** bounded to May-2026-closed deals (a small set, not all closed-won), so the history
+reads are limited. Still build with a **dry-run preview** (report every proposed role change before
+applying) and throttle to respect the account-wide daily API limit.
 
 ---
 
