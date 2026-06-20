@@ -4,45 +4,59 @@ export const dashboardHtml = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Iron Dome</title>
+<title>Iron Dome · כִּפַּת בַּרְזֶל</title>
 <style>
   :root {
     font-family: -apple-system, system-ui, sans-serif;
-    --bg:#0d0f13; --panel:#161a21; --panel2:#1c2129; --border:#2b3140;
-    --gold:#d4af37; --gold-bright:#e6c258; --ink:#0e0a02;
-    --text:#e9eaee; --muted:#8b93a3;
+    --bg:#0a0f1d; --panel:#121a2e; --panel2:#1a2440; --border:#25304d;
+    --blue:#0038b8; --blue-bright:#2f6be0; --gold:#d4af37; --gold-bright:#e6c258;
+    --ink:#0e0a02; --white:#f3f6ff; --text:#e9eef7; --muted:#8a98b5;
   }
-  body { max-width: 780px; margin: 0 auto; padding: 1.5rem 1rem 3rem; color: var(--text); background: var(--bg); }
-  header.brand { display:flex; align-items:center; gap:.6rem; padding:.4rem 0 1rem; border-bottom:2px solid var(--gold); margin-bottom:1.2rem; }
-  header.brand h1 { font-size:1.7rem; margin:0; letter-spacing:.06em; color:var(--gold);
-    text-transform:uppercase; font-weight:800; text-shadow:0 0 18px rgba(212,175,55,.25); }
-  header.brand .badge { font-size:.7rem; color:var(--muted); border:1px solid var(--border); border-radius:999px; padding:.15rem .5rem; }
-  h3 { color: var(--gold); font-size:1rem; letter-spacing:.02em; margin:.2rem 0 .8rem; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-left:3px solid var(--gold);
-    border-radius: 12px; padding: 1rem 1.25rem; margin: 1rem 0; }
-  .row { display: flex; align-items: center; justify-content: space-between; padding: .45rem 0; }
-  .switch { font-weight: 600; }
+  body { max-width:780px; margin:0 auto; padding:1.5rem 1rem 3rem; color:var(--text);
+    background:
+      radial-gradient(900px 380px at 50% -160px, rgba(0,56,184,.28), transparent 70%),
+      var(--bg);
+    border-top:5px solid var(--blue); }
+  header.brand { display:flex; align-items:center; gap:.85rem; padding:.6rem 0 1rem;
+    border-bottom:2px solid var(--gold); margin-bottom:1.2rem; }
+  header.brand .titles h1 { font-size:1.75rem; margin:0; letter-spacing:.10em; color:var(--white);
+    text-transform:uppercase; font-weight:800; text-shadow:0 0 22px rgba(47,107,224,.5); }
+  header.brand .heb { color:var(--gold); font-size:.85rem; letter-spacing:.04em; margin-top:.15rem; }
+  header.brand .heb .sep { color:var(--muted); }
+  .star { filter: drop-shadow(0 0 10px rgba(212,175,55,.45)); flex:0 0 auto; }
+  h3 { color:var(--gold); font-size:1rem; letter-spacing:.02em; margin:.2rem 0 .8rem; }
+  .card { background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--blue);
+    border-radius:12px; padding:1rem 1.25rem; margin:1rem 0; }
+  .row { display:flex; align-items:center; justify-content:space-between; padding:.45rem 0; }
+  .switch { font-weight:600; }
   input[type=text], input[type=password] { width:100%; padding:.55rem; border:1px solid var(--border);
     border-radius:8px; box-sizing:border-box; background:var(--panel2); color:var(--text); }
   input::placeholder { color:#5d6675; }
   button { padding:.5rem .95rem; border:0; border-radius:8px; background:var(--gold); color:var(--ink);
     cursor:pointer; font-weight:700; letter-spacing:.02em; }
   button:hover { background:var(--gold-bright); }
-  button.secondary { background:var(--panel2); color:var(--text); border:1px solid var(--border); font-weight:600; }
+  button.secondary { background:var(--panel2); color:var(--white); border:1px solid var(--blue); font-weight:600; }
+  button.secondary:hover { border-color:var(--blue-bright); }
   table { width:100%; border-collapse:collapse; font-size:.85rem; }
   td, th { text-align:left; padding:.4rem .45rem; border-bottom:1px solid var(--border); vertical-align:top; }
   th { color:var(--gold); font-weight:600; }
   .muted { color:var(--muted); font-size:.85rem; }
   .pill { display:inline-block; padding:.12rem .55rem; border-radius:999px; font-size:.75rem;
-    background:var(--panel2); border:1px solid var(--border); }
+    background:var(--panel2); border:1px solid var(--blue); }
   a { color:var(--gold); }
 </style>
 </head>
 <body>
   <header class="brand">
-    <span style="font-size:1.6rem">🛡️</span>
-    <h1>Iron Dome</h1>
-    <span class="badge">deal defense</span>
+    <svg class="star" width="40" height="40" viewBox="0 0 100 100" fill="none"
+         stroke="var(--gold)" stroke-width="6" stroke-linejoin="round">
+      <polygon points="50,7 89,74 11,74" />
+      <polygon points="50,93 11,26 89,26" />
+    </svg>
+    <div class="titles">
+      <h1>Iron Dome</h1>
+      <div class="heb">כִּפַּת בַּרְזֶל <span class="sep">·</span> deal defense</div>
+    </div>
   </header>
 
   <div id="gate" class="card">
