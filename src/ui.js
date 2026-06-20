@@ -1,28 +1,50 @@
-/** Minimal single-page dashboard: toggles, pin-a-deal, and the activity log. */
+/** Single-page dashboard: toggles, pin-a-deal, sweep, enemy watch, activity log. */
 export const dashboardHtml = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Corgi HubSpot Bot</title>
+<title>Iron Dome</title>
 <style>
-  :root { font-family: -apple-system, system-ui, sans-serif; }
-  body { max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #1d1d1f; }
-  h1 { font-size: 1.4rem; }
-  .card { border: 1px solid #e3e3e6; border-radius: 12px; padding: 1rem 1.25rem; margin: 1rem 0; }
-  .row { display: flex; align-items: center; justify-content: space-between; padding: .4rem 0; }
+  :root {
+    font-family: -apple-system, system-ui, sans-serif;
+    --bg:#0d0f13; --panel:#161a21; --panel2:#1c2129; --border:#2b3140;
+    --gold:#d4af37; --gold-bright:#e6c258; --ink:#0e0a02;
+    --text:#e9eaee; --muted:#8b93a3;
+  }
+  body { max-width: 780px; margin: 0 auto; padding: 1.5rem 1rem 3rem; color: var(--text); background: var(--bg); }
+  header.brand { display:flex; align-items:center; gap:.6rem; padding:.4rem 0 1rem; border-bottom:2px solid var(--gold); margin-bottom:1.2rem; }
+  header.brand h1 { font-size:1.7rem; margin:0; letter-spacing:.06em; color:var(--gold);
+    text-transform:uppercase; font-weight:800; text-shadow:0 0 18px rgba(212,175,55,.25); }
+  header.brand .badge { font-size:.7rem; color:var(--muted); border:1px solid var(--border); border-radius:999px; padding:.15rem .5rem; }
+  h3 { color: var(--gold); font-size:1rem; letter-spacing:.02em; margin:.2rem 0 .8rem; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-left:3px solid var(--gold);
+    border-radius: 12px; padding: 1rem 1.25rem; margin: 1rem 0; }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: .45rem 0; }
   .switch { font-weight: 600; }
-  input[type=text], input[type=password] { width: 100%; padding: .5rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-  button { padding: .5rem .9rem; border: 0; border-radius: 8px; background: #0071e3; color: #fff; cursor: pointer; }
-  button.secondary { background: #e3e3e6; color: #1d1d1f; }
-  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-  td, th { text-align: left; padding: .35rem .4rem; border-bottom: 1px solid #f0f0f2; vertical-align: top; }
-  .muted { color: #86868b; font-size: .85rem; }
-  .pill { display:inline-block; padding:.1rem .5rem; border-radius:999px; font-size:.75rem; background:#f0f0f2; }
+  input[type=text], input[type=password] { width:100%; padding:.55rem; border:1px solid var(--border);
+    border-radius:8px; box-sizing:border-box; background:var(--panel2); color:var(--text); }
+  input::placeholder { color:#5d6675; }
+  button { padding:.5rem .95rem; border:0; border-radius:8px; background:var(--gold); color:var(--ink);
+    cursor:pointer; font-weight:700; letter-spacing:.02em; }
+  button:hover { background:var(--gold-bright); }
+  button.secondary { background:var(--panel2); color:var(--text); border:1px solid var(--border); font-weight:600; }
+  table { width:100%; border-collapse:collapse; font-size:.85rem; }
+  td, th { text-align:left; padding:.4rem .45rem; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { color:var(--gold); font-weight:600; }
+  .muted { color:var(--muted); font-size:.85rem; }
+  .pill { display:inline-block; padding:.12rem .55rem; border-radius:999px; font-size:.75rem;
+    background:var(--panel2); border:1px solid var(--border); }
+  a { color:var(--gold); }
 </style>
 </head>
 <body>
-  <h1>🐕 Corgi HubSpot Bot</h1>
+  <header class="brand">
+    <span style="font-size:1.6rem">🛡️</span>
+    <h1>Iron Dome</h1>
+    <span class="badge">deal defense</span>
+  </header>
+
   <div id="gate" class="card">
     <p>Enter dashboard password:</p>
     <input type="password" id="pw" placeholder="password" />
@@ -86,7 +108,7 @@ async function refresh(){
   return true;
 }
 async function enemyScan(){ await api('/api/enemy-scan',{method:'POST'}); refresh(); }
-function setBtn(id, on){ const b=document.getElementById(id); b.textContent = on?'ON':'OFF'; b.style.background = on?'#1db954':'#e3e3e6'; b.style.color = on?'#fff':'#1d1d1f'; }
+function setBtn(id, on){ const b=document.getElementById(id); b.textContent = on?'ON':'OFF'; b.style.background = on?'var(--gold)':'var(--panel2)'; b.style.color = on?'var(--ink)':'var(--muted)'; }
 async function toggle(key){ const res=await api('/api/status'); const s=await res.json(); const next = !s.config[key]; await api('/api/toggle',{method:'POST',body:JSON.stringify({key,value:next})}); refresh(); }
 async function saveCount(){ await api('/api/toggle',{method:'POST',body:JSON.stringify({key:'function3_daily_count',value:document.getElementById('cnt').value})}); refresh(); }
 async function pin(){ const url=document.getElementById('url').value; const res=await api('/api/pin',{method:'POST',body:JSON.stringify({url})}); const j=await res.json(); if(!res.ok) alert(j.error||'failed'); document.getElementById('url').value=''; refresh(); }
