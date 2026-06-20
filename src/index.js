@@ -1,7 +1,7 @@
 import express from 'express';
 import cron from 'node-cron';
 import { config, FN3_CRON, TIMEZONE, REVERT_LOOP_MS, SWEEP_INTERVAL_MS, ENEMY_WATCH_MS, TOGGLES } from './config.js';
-import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit, backfillSummary, listEnemies } from './db.js';
+import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit, backfillSummary, listEnemies, clearEnemies } from './db.js';
 import { scanForEnemies } from './enemyWatch.js';
 import { startDossier, getDossierState } from './dossier.js';
 import { verifySignature, dispatchEvents } from './webhooks.js';
@@ -60,6 +60,9 @@ app.post('/api/dossier/start', requirePassword, async (req, res) => {
 app.get('/api/dossier/status', requirePassword, (_req, res) => res.json(getDossierState()));
 
 // enemy detection: list detected attackers + run a proactive scan on demand
+app.post('/api/enemies/reset', requirePassword, async (_req, res) => {
+  await clearEnemies(); res.json({ ok: true });
+});
 app.get('/api/enemies', requirePassword, async (_req, res) => {
   res.json(await listEnemies());
 });

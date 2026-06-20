@@ -1,4 +1,4 @@
-import { ROLE_PROPS, OUR_APP_ID } from './config.js';
+import { ROLE_PROPS, EXCLUDED_INTEGRATION_IDS } from './config.js';
 import { searchDeals, getDealHistory } from './hubspot.js';
 import { corgiCorpOwnerIds } from './teams.js';
 import { recordEnemy } from './db.js';
@@ -26,7 +26,7 @@ export async function scanForEnemies({ limit = 80 } = {}) {
         const cur = entries[i], prev = entries[i + 1];
         const displacedCorp = prev.value && corp.has(String(prev.value));
         const toNonCorp = !cur.value || !corp.has(String(cur.value));
-        if (cur.sourceType === 'INTEGRATION' && String(cur.sourceId) !== OUR_APP_ID && displacedCorp && toNonCorp) {
+        if (cur.sourceType === 'INTEGRATION' && !EXCLUDED_INTEGRATION_IDS.has(String(cur.sourceId)) && displacedCorp && toNonCorp) {
           (found[cur.sourceId] ||= { hits: 0, sampleDeal: d.id }).hits++;
         }
       }

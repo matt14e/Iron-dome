@@ -195,3 +195,6 @@ export async function listEnemies() {
   const { rows } = await pool.query(`SELECT * FROM detected_enemies ORDER BY last_seen DESC`);
   return rows;
 }
+export async function clearEnemies() {
+  await pool.query(`DELETE FROM detected_enemies`);
+}

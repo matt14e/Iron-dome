@@ -27,6 +27,8 @@ export const EMILY_OWNER_ID = '161706311';
 
 /** This bot's own HubSpot application ID — used to ignore our own writes in enemy detection. */
 export const OUR_APP_ID = '35562869';
+/** Apps that are NOT enemies: our bot + the admin/MCP connector used for manual edits. */
+export const EXCLUDED_INTEGRATION_IDS = new Set(['35562869', '16228553']);
 /** Enemy-watch proactive scan cadence. */
 export const ENEMY_WATCH_MS = 60 * 60 * 1000;
 
