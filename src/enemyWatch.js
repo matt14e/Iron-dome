@@ -14,9 +14,14 @@ export async function todayDisplacements({ limit = 250 } = {}) {
   const tech = new Set((await corgiTechOwnerIds()).map(String));
   const start = startOfDayMs(TIMEZONE);
 
-  const search = await searchDeals([], ['dealname'], limit, undefined,
-    [{ propertyName: 'hs_lastmodifieddate', direction: 'DESCENDING' }]);
-  const deals = search.results || [];
+  const deals = [];
+  let after;
+  do {
+    const page = await searchDeals([], ['dealname'], 100, after,
+      [{ propertyName: 'hs_lastmodifieddate', direction: 'DESCENDING' }]);
+    deals.push(...(page.results || []));
+    after = page.paging?.next?.after || null;
+  } while (after && deals.length < limit);
 
   const byDeal = {};
   for (const d of deals) {
