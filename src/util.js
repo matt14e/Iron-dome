@@ -32,6 +32,16 @@ export function startOfMonthMs(timeZone, now = new Date()) {
   return naiveUTC - offset * 60000;
 }
 
+/** Epoch ms for midnight (start of today) in `timeZone`. */
+export function startOfDayMs(timeZone, now = new Date()) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(now).map((x) => [x.type, x.value]),
+  );
+  const naive = Date.UTC(+p.year, +p.month - 1, +p.day, 0, 0, 0);
+  return naive - tzOffsetMinutes(new Date(naive), timeZone) * 60000;
+}
+
 /** [startMs, endMs) for a given calendar month (month is 1-12) in `timeZone`. */
 export function monthBoundsMs(year, month, timeZone) {
   const startNaive = Date.UTC(year, month - 1, 1);
