@@ -120,9 +120,15 @@ app.get('/api/diag', requirePassword, async (_req, res) => {
 
 // Function 1 backfill: dry-run preview (read-only) and apply
 // Function 1 backfill: server-side scan (dry-run staging) -> status -> apply
-app.post('/api/backfill/scan', requirePassword, async (_req, res) => {
-  try { res.json(await startBackfillScan()); }
-  catch (e) { res.status(500).json({ error: e.message }); }
+app.post('/api/backfill/scan', requirePassword, async (req, res) => {
+  try {
+    const year = req.query.year ? Number(req.query.year) : undefined;
+    const month = req.query.month ? Number(req.query.month) : undefined;
+    if ((year !== undefined && !Number.isInteger(year)) || (month !== undefined && !(Number.isInteger(month) && month >= 1 && month <= 12))) {
+      return res.status(400).json({ error: 'year must be an integer, month 1-12' });
+    }
+    res.json(await startBackfillScan({ year, month }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.get('/api/backfill/status', requirePassword, async (_req, res) => {
   try { res.json({ state: getBackfillState(), summary: await backfillSummary() }); }

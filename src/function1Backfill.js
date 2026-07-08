@@ -9,21 +9,22 @@ const CLOSEDWON = 'closedwon';
 const THROTTLE_MS = 120; // gap between HubSpot calls to respect the per-second burst limit
 
 // Module-level progress for the long-running scan (survives across HTTP requests; one process).
-let state = { phase: 'idle', running: false, done: false, pagesDone: 0, scanned: 0, qualifying: 0, found: 0, error: null, startedAt: null, finishedAt: null };
+let state = { phase: 'idle', running: false, done: false, month: null, pagesDone: 0, scanned: 0, qualifying: 0, found: 0, error: null, startedAt: null, finishedAt: null };
 export function getBackfillState() { return state; }
 
 /** Kick off the scan in the background (not awaited). Stores proposed changes in the DB. */
-export async function startBackfillScan() {
+export async function startBackfillScan({ year = FN1_BACKFILL_YEAR, month = FN1_BACKFILL_MONTH } = {}) {
   if (state.running) return { alreadyRunning: true, state };
-  state = { phase: 'scanning', running: true, done: false, pagesDone: 0, scanned: 0, qualifying: 0, found: 0, error: null, startedAt: Date.now(), finishedAt: null };
-  scanLoop().catch((e) => { state.error = e.message; state.running = false; state.done = true; state.phase = 'error'; });
-  return { started: true };
+  state = { phase: 'scanning', running: true, done: false, month: `${year}-${String(month).padStart(2, '0')}`,
+    pagesDone: 0, scanned: 0, qualifying: 0, found: 0, error: null, startedAt: Date.now(), finishedAt: null };
+  scanLoop(year, month).catch((e) => { state.error = e.message; state.running = false; state.done = true; state.phase = 'error'; });
+  return { started: true, month: state.month };
 }
 
-async function scanLoop() {
+async function scanLoop(year, month) {
   await clearBackfill();
   const corp = new Set((await corgiCorpOwnerIds()).map(String));
-  const [monthStart, monthEnd] = monthBoundsMs(FN1_BACKFILL_YEAR, FN1_BACKFILL_MONTH, TIMEZONE);
+  const [monthStart, monthEnd] = monthBoundsMs(year, month, TIMEZONE);
   const filterGroups = [{ filters: [
     { propertyName: 'hs_v2_date_entered_closedwon', operator: 'GTE', value: String(monthStart) },
   ] }];
