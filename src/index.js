@@ -134,8 +134,8 @@ app.get('/api/backfill/status', requirePassword, async (_req, res) => {
   try { res.json({ state: getBackfillState(), summary: await backfillSummary() }); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post('/api/backfill/apply', requirePassword, async (_req, res) => {
-  try { res.json(await applyBackfill()); }
+app.post('/api/backfill/apply', requirePassword, async (req, res) => {
+  try { res.json(await applyBackfill({ dealIds: req.body?.dealIds })); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 

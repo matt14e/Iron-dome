@@ -67,9 +67,14 @@ async function scanLoop(year, month) {
   state.running = false; state.done = true; state.phase = 'done'; state.finishedAt = Date.now();
 }
 
-/** Apply the staged changes (grouped per deal). Safe to re-run; only applies unapplied rows. */
-export async function applyBackfill() {
-  const byDeal = await pendingBackfillByDeal();
+/** Apply the staged changes (grouped per deal). Safe to re-run; only applies unapplied rows.
+ *  Pass dealIds to apply only those deals, leaving the rest staged. */
+export async function applyBackfill({ dealIds } = {}) {
+  let byDeal = await pendingBackfillByDeal();
+  if (Array.isArray(dealIds) && dealIds.length) {
+    const want = new Set(dealIds.map(String));
+    byDeal = Object.fromEntries(Object.entries(byDeal).filter(([id]) => want.has(String(id))));
+  }
   let applied = 0;
   for (const [deal, set] of Object.entries(byDeal)) {
     try {
