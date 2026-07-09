@@ -100,12 +100,17 @@ app.post('/api/unpin', requirePassword, async (req, res) => {
 });
 
 // Function 2 sweep: preview (changes nothing) and apply (forces qualifying deals to Inbound)
-app.get('/api/sweep/preview', requirePassword, async (_req, res) => {
-  try { res.json(await sweepInbound({ apply: false })); }
+function sweepDateOpts(req) {
+  const createdAfterMs = req.query.createdAfter ? Number(req.query.createdAfter) : undefined;
+  const createdBeforeMs = req.query.createdBefore ? Number(req.query.createdBefore) : undefined;
+  return { createdAfterMs, createdBeforeMs };
+}
+app.get('/api/sweep/preview', requirePassword, async (req, res) => {
+  try { res.json(await sweepInbound({ apply: false, ...sweepDateOpts(req) })); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
-app.post('/api/sweep/apply', requirePassword, async (_req, res) => {
-  try { res.json(await sweepInbound({ apply: true })); }
+app.post('/api/sweep/apply', requirePassword, async (req, res) => {
+  try { res.json(await sweepInbound({ apply: true, ...sweepDateOpts(req) })); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 

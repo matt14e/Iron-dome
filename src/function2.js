@@ -72,24 +72,31 @@ export async function ensureInbound(dealId) {
  * carries the signal — with nothing on the deal — are still handled reactively (on source change/pin),
  * just not by this sweep.
  *
- * @param {{apply?: boolean}} opts - apply=false returns a preview (changes nothing).
+ * @param {{apply?: boolean, createdAfterMs?: number, createdBeforeMs?: number}} opts
+ *   apply=false returns a preview (changes nothing); createdAfterMs/BeforeMs scope by deal create date.
  */
-export async function sweepInbound({ apply = false } = {}) {
+export async function sweepInbound({ apply = false, createdAfterMs, createdBeforeMs } = {}) {
   const techOwners = await corgiTechOwnerIds();
   if (techOwners.length === 0) return { apply, count: 0, candidates: [] };
+
+  const dateFilters = [];
+  if (createdAfterMs) dateFilters.push({ propertyName: 'createdate', operator: 'GTE', value: String(createdAfterMs) });
+  if (createdBeforeMs) dateFilters.push({ propertyName: 'createdate', operator: 'LT', value: String(createdBeforeMs) });
 
   const appIds = [...INBOUND_INTEGRATION_APP_IDS];
   const filterGroups = [
     { filters: [
       { propertyName: 'hubspot_owner_id', operator: 'IN', values: techOwners },
       { propertyName: 'hs_analytics_source_data_2', operator: 'IN', values: appIds },
+      ...dateFilters,
     ] },
     { filters: [
       { propertyName: 'hubspot_owner_id', operator: 'IN', values: techOwners },
       { propertyName: 'hs_object_source_detail_1', operator: 'IN', values: ['Tail', 'Deep-River'] },
+      ...dateFilters,
     ] },
   ];
-  const props = ['dealname', SOURCE_PROP, 'hubspot_owner_id', ...SOURCE_FIELDS];
+  const props = ['dealname', SOURCE_PROP, 'hubspot_owner_id', 'createdate', ...SOURCE_FIELDS];
 
   const found = new Map();
   let after;
@@ -102,7 +109,7 @@ export async function sweepInbound({ apply = false } = {}) {
   // Only those not already Inbound need fixing.
   const candidates = [...found.values()]
     .filter((d) => (d.properties[SOURCE_PROP] || '') !== INBOUND_VALUE)
-    .map((d) => ({ id: d.id, name: d.properties.dealname || '', currentSource: d.properties[SOURCE_PROP] || null }));
+    .map((d) => ({ id: d.id, name: d.properties.dealname || '', currentSource: d.properties[SOURCE_PROP] || null, created: d.properties.createdate || null }));
 
   if (!apply) return { apply: false, count: candidates.length, candidates };
 
