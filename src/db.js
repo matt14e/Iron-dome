@@ -56,6 +56,10 @@ export async function initDb() {
       note       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS fn1_exempt_deals (
+      deal_id    TEXT PRIMARY KEY,           -- deals excluded from Function 1 role-lock enforcement
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS detected_enemies (
       app_id      TEXT PRIMARY KEY,          -- HubSpot application id reassigning Corgi Corp deals
       hits        INTEGER NOT NULL DEFAULT 0,
@@ -176,6 +180,22 @@ export async function logAction(entry) {
 }
 export async function recentAudit(limit = 100) {
   const { rows } = await pool.query(`SELECT * FROM audit_log ORDER BY created_at DESC LIMIT $1`, [limit]);
+  return rows;
+}
+
+// --- Function 1 exemptions (deals excluded from the Corp role-lock) ---
+export async function exemptDeal(dealId) {
+  await pool.query(`INSERT INTO fn1_exempt_deals (deal_id) VALUES ($1) ON CONFLICT DO NOTHING`, [String(dealId)]);
+}
+export async function unexemptDeal(dealId) {
+  await pool.query(`DELETE FROM fn1_exempt_deals WHERE deal_id = $1`, [String(dealId)]);
+}
+export async function isExempt(dealId) {
+  const { rows } = await pool.query(`SELECT 1 FROM fn1_exempt_deals WHERE deal_id = $1`, [String(dealId)]);
+  return rows.length > 0;
+}
+export async function listExempt() {
+  const { rows } = await pool.query(`SELECT deal_id, created_at FROM fn1_exempt_deals ORDER BY created_at DESC`);
   return rows;
 }
 

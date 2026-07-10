@@ -85,6 +85,14 @@ export const dashboardHtml = `<!doctype html>
     </div>
 
     <div class="card">
+      <h3>Exempt a deal from the Corp lock (Function 1)</h3>
+      <p class="muted">Paste a HubSpot deal URL. That deal will be ignored by the auto-revert-to-Corp lock until removed from this list.</p>
+      <input type="text" id="exurl" placeholder="https://app-na2.hubspot.com/contacts/.../record/0-3/123..." />
+      <p><button onclick="exempt()">Exempt deal</button></p>
+      <div id="exempts"></div>
+    </div>
+
+    <div class="card">
       <h3>Inbound sweep (Function 2)</h3>
       <p class="muted">Find Corgi Tech deals sourced from Tail / Deep River that aren't marked Inbound. Preview shows what would change; Apply sets them to Inbound now.</p>
       <p><button class="secondary" onclick="previewSweep()">Preview (dry run)</button> <button onclick="applySweep()">Apply</button></p>
@@ -113,6 +121,7 @@ async function refresh(){
   setBtn('t1', s.config.function1_enabled); setBtn('t2', s.config.function2_enabled); setBtn('t3', s.config.function3_enabled);
   document.getElementById('cnt').value = s.config.function3_daily_count;
   document.getElementById('pins').innerHTML = s.pinned.map(p => '<span class="pill">'+p.deal_id+' <a href="#" onclick="unpin(\\''+p.deal_id+'\\')">✕</a></span>').join(' ') || '<span class="muted">none</span>';
+  document.getElementById('exempts').innerHTML = (s.exempt||[]).map(p => '<span class="pill">'+p.deal_id+' <a href="#" onclick="unexempt(\\''+p.deal_id+'\\')">✕</a></span>').join(' ') || '<span class="muted">none</span>';
   document.getElementById('log').querySelector('tbody').innerHTML = s.audit.map(a =>
     '<tr><td>'+new Date(a.created_at).toLocaleString()+'</td><td><b>'+a.fn+'</b></td><td>'+(a.deal_id||'')+'</td><td>'+(a.note||'')+'</td></tr>').join('');
   const en = s.enemies || [];
@@ -127,6 +136,8 @@ async function toggle(key){ const res=await api('/api/status'); const s=await re
 async function saveCount(){ await api('/api/toggle',{method:'POST',body:JSON.stringify({key:'function3_daily_count',value:document.getElementById('cnt').value})}); refresh(); }
 async function pin(){ const url=document.getElementById('url').value; const res=await api('/api/pin',{method:'POST',body:JSON.stringify({url})}); const j=await res.json(); if(!res.ok) alert(j.error||'failed'); document.getElementById('url').value=''; refresh(); }
 async function unpin(id){ await api('/api/unpin',{method:'POST',body:JSON.stringify({dealId:id})}); refresh(); }
+async function exempt(){ const url=document.getElementById('exurl').value; const res=await api('/api/exempt',{method:'POST',body:JSON.stringify({url})}); const j=await res.json(); if(!res.ok) alert(j.error||'failed'); document.getElementById('exurl').value=''; refresh(); }
+async function unexempt(id){ await api('/api/unexempt',{method:'POST',body:JSON.stringify({dealId:id})}); refresh(); }
 async function previewSweep(){ document.getElementById('sweep').textContent='Scanning…'; const r=await api('/api/sweep/preview'); renderSweep(await r.json(), false); }
 async function applySweep(){ if(!confirm('Force all matching deals to Inbound now?')) return; document.getElementById('sweep').textContent='Applying…'; const r=await api('/api/sweep/apply',{method:'POST'}); renderSweep(await r.json(), true); refresh(); }
 function renderSweep(j, applied){ const el=document.getElementById('sweep'); if(j.error){ el.textContent='Error: '+j.error; return; } const rows=(j.candidates||[]).slice(0,50).map(c=>'<tr><td>'+c.id+'</td><td>'+c.name+'</td><td>'+(c.currentSource||'(none)')+'</td></tr>').join(''); const head = applied ? ('Applied to '+j.applied+' of '+j.count+' deal(s)') : (j.count+' deal(s) would be set to Inbound'); el.innerHTML='<p><b>'+head+'</b></p>'+(rows?'<table><thead><tr><th>ID</th><th>Deal</th><th>Current source</th></tr></thead><tbody>'+rows+'</tbody></table>'+(j.count>50?'<p class="muted">(showing first 50)</p>':''):''); }

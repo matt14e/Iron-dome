@@ -1,7 +1,7 @@
 import express from 'express';
 import cron from 'node-cron';
 import { config, FN3_CRON, TIMEZONE, REVERT_LOOP_MS, SWEEP_INTERVAL_MS, ENEMY_WATCH_MS, TOGGLES } from './config.js';
-import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit, backfillSummary, listEnemies, clearEnemies } from './db.js';
+import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit, backfillSummary, listEnemies, clearEnemies, exemptDeal, unexemptDeal, listExempt } from './db.js';
 import { scanForEnemies, todayDisplacements } from './enemyWatch.js';
 import { startDossier, getDossierState } from './dossier.js';
 import { verifySignature, dispatchEvents } from './webhooks.js';
@@ -46,6 +46,7 @@ app.get('/api/status', requirePassword, async (_req, res) => {
       function3_daily_count: await getConfig(TOGGLES.fn3Count),
     },
     pinned: await listPinned(),
+    exempt: await listExempt(),
     audit: await recentAudit(100),
     enemies: await listEnemies(),
   });
@@ -121,6 +122,18 @@ app.get('/api/diag', requirePassword, async (_req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// Function 1 exemptions: paste a deal URL to exclude that deal from the Corp role-lock
+app.post('/api/exempt', requirePassword, async (req, res) => {
+  const dealId = extractDealIdFromUrl(req.body?.url || '');
+  if (!dealId) return res.status(400).json({ error: 'could not parse deal id from URL' });
+  await exemptDeal(dealId);
+  res.json({ ok: true, dealId });
+});
+app.post('/api/unexempt', requirePassword, async (req, res) => {
+  await unexemptDeal(String(req.body?.dealId || ''));
+  res.json({ ok: true });
 });
 
 // Function 1 backfill: dry-run preview (read-only) and apply

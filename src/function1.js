@@ -1,7 +1,7 @@
 import { ROLE_PROPS, REVERT_DELAY_MS, TOGGLES, EXCLUDED_INTEGRATION_IDS } from './config.js';
 import { getDealPropertyHistory } from './hubspot.js';
 import { isCorgiCorpActor, isCorgiCorpOwnerValue } from './teams.js';
-import { enqueueRevert, isEnabled, recordEnemy } from './db.js';
+import { enqueueRevert, isEnabled, recordEnemy, isExempt } from './db.js';
 import { wasSelfWrite } from './selfWrites.js';
 
 /**
@@ -12,6 +12,7 @@ export async function handleRoleChange({ dealId, property, newValue, actorUserId
   if (!ROLE_PROPS.includes(property)) return;
   if (!(await isEnabled(TOGGLES.fn1))) return;
   if (wasSelfWrite(dealId, property, newValue)) return; // our own edit echoing back
+  if (await isExempt(dealId)) return; // deal explicitly excluded from the Corp lock
 
   // Recover the previous value + confirm the actor from property history (most-recent first).
   const data = await getDealPropertyHistory(dealId, property);

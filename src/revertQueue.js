@@ -1,6 +1,6 @@
 import { ROLE_PROPS, SOURCE_PROP, TOGGLES } from './config.js';
 import { getDeal, updateDeal } from './hubspot.js';
-import { dueReverts, deleteRevert, isEnabled, logAction } from './db.js';
+import { dueReverts, deleteRevert, isEnabled, logAction, isExempt } from './db.js';
 import { markSelfWrite } from './selfWrites.js';
 
 /**
@@ -17,6 +17,7 @@ export async function processDueReverts() {
       const isRole = ROLE_PROPS.includes(r.property);
       const toggle = isRole ? TOGGLES.fn1 : TOGGLES.fn2;
       if (!(await isEnabled(toggle))) { await deleteRevert(r.id); continue; }
+      if (isRole && (await isExempt(r.deal_id))) { await deleteRevert(r.id); continue; } // exempted after queueing
 
       const deal = await getDeal(r.deal_id, [r.property]);
       const current = deal.properties[r.property] ?? null;

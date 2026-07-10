@@ -1,7 +1,7 @@
 import { ROLE_PROPS, TIMEZONE, FN1_BACKFILL_YEAR, FN1_BACKFILL_MONTH } from './config.js';
 import { searchDeals, getDealHistory, updateDeal } from './hubspot.js';
 import { corgiCorpOwnerIds } from './teams.js';
-import { logAction, clearBackfill, addBackfillChange, pendingBackfillByDeal, markBackfillApplied } from './db.js';
+import { logAction, clearBackfill, addBackfillChange, pendingBackfillByDeal, markBackfillApplied, isExempt } from './db.js';
 import { markSelfWrite } from './selfWrites.js';
 import { monthBoundsMs, sleep } from './util.js';
 
@@ -78,6 +78,7 @@ export async function applyBackfill({ dealIds } = {}) {
   let applied = 0;
   for (const [deal, set] of Object.entries(byDeal)) {
     try {
+      if (await isExempt(deal)) continue; // never backfill an exempted deal
       await updateDeal(deal, set);
       for (const [k, v] of Object.entries(set)) markSelfWrite(deal, k, v);
       await logAction({ fn: 'fn1', dealId: deal, property: Object.keys(set).join(','),
