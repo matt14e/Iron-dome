@@ -2,7 +2,7 @@ import express from 'express';
 import cron from 'node-cron';
 import { config, FN3_CRON, TIMEZONE, REVERT_LOOP_MS, SWEEP_INTERVAL_MS, ENEMY_WATCH_MS, TOGGLES } from './config.js';
 import { initDb, isEnabled, getConfig, setConfig, pinDeal, unpinDeal, listPinned, recentAudit, backfillSummary, listEnemies, clearEnemies, exemptDeal, unexemptDeal, listExempt } from './db.js';
-import { scanForEnemies, todayDisplacements } from './enemyWatch.js';
+import { scanForEnemies, todayDisplacements, displacementsPage } from './enemyWatch.js';
 import { startDossier, getDossierState } from './dossier.js';
 import { verifySignature, dispatchEvents } from './webhooks.js';
 import { processDueReverts } from './revertQueue.js';
@@ -67,6 +67,20 @@ app.post('/api/enemies/reset', requirePassword, async (_req, res) => {
 app.get('/api/enemies', requirePassword, async (_req, res) => {
   res.json(await listEnemies());
 });
+// range scan, one page per request: corp->tech role switches since ?since=<epoch ms>
+app.get('/api/displacements', requirePassword, async (req, res) => {
+  const sinceMs = Number(req.query.since);
+  if (!Number.isFinite(sinceMs) || sinceMs <= 0) return res.status(400).json({ error: 'since (epoch ms) required' });
+  try {
+    res.json(await displacementsPage({
+      sinceMs,
+      after: req.query.after,
+      requireTech: req.query.requireTech !== 'false',
+      fields: req.query.fields ? String(req.query.fields).split(',') : undefined,
+    }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/today', requirePassword, async (req, res) => {
   try { res.json(await todayDisplacements({ limit: Math.min(Number(req.query.limit || 250), 400) })); }
   catch (e) { res.status(500).json({ error: e.message }); }

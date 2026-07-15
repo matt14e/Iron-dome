@@ -5,6 +5,47 @@ import { recordEnemy } from './db.js';
 import { sleep, startOfDayMs } from './util.js';
 
 /**
+ * One page (~100 deals) of a range scan: role changes FROM a Corgi Corp member TO a Corgi Tech member
+ * (requireTech=true) or to any non-corp value (requireTech=false), where the CHANGE happened at/after
+ * sinceMs. Scans deals modified since sinceMs (a change bumps last-modified, so this is a superset).
+ * Pass the returned nextAfter back in to continue; null = done.
+ */
+export async function displacementsPage({ sinceMs, after, requireTech = true, fields = ['bdr', 'hubspot_owner_id'] } = {}) {
+  const corp = new Set((await corgiCorpOwnerIds()).map(String));
+  const tech = new Set((await corgiTechOwnerIds()).map(String));
+
+  const page = await searchDeals(
+    [{ filters: [{ propertyName: 'hs_lastmodifieddate', operator: 'GTE', value: String(sinceMs) }] }],
+    ['dealname'], 100, after,
+    [{ propertyName: 'hs_lastmodifieddate', direction: 'DESCENDING' }],
+  );
+  const deals = page.results || [];
+  const nextAfter = page.paging?.next?.after || null;
+
+  const hits = [];
+  for (const d of deals) {
+    const hist = await getDealHistory(d.id, fields);
+    await sleep(120);
+    const h = hist.propertiesWithHistory || {};
+    for (const field of fields) {
+      const entries = h[field] || []; // most-recent first
+      for (let i = 0; i < entries.length - 1; i++) {
+        const cur = entries[i], prev = entries[i + 1];
+        if (Date.parse(cur.timestamp) < sinceMs) break; // older than the window — done with this field
+        const fromCorp = prev.value && corp.has(String(prev.value));
+        const toOk = cur.value && (requireTech ? tech.has(String(cur.value)) : !corp.has(String(cur.value)));
+        if (fromCorp && toOk) {
+          hits.push({ deal: d.id, name: d.properties.dealname, field, ts: cur.timestamp,
+            from: String(prev.value), to: String(cur.value),
+            by: cur.sourceType === 'INTEGRATION' ? `app ${cur.sourceId}` : cur.sourceType });
+        }
+      }
+    }
+  }
+  return { pageScanned: deals.length, nextAfter, hits };
+}
+
+/**
  * Deals whose BDR / AM / owner was changed today from a Corgi Corp member to a non-Corgi-Corp person.
  * Scans the most-recently-modified deals (attacks bump last-modified, so they surface first).
  * Returns per-deal grouping with the apps/actors responsible and flip counts.
