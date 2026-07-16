@@ -216,7 +216,7 @@ app.get('/api/history', requirePassword, async (req, res) => {
     const h = data.propertiesWithHistory || {};
     const out = {};
     for (const k of Object.keys(h)) {
-      out[k] = h[k].slice(0, 15).map((e) => ({
+      out[k] = h[k].slice(0, 100).map((e) => ({
         value: e.value, timestamp: e.timestamp, sourceType: e.sourceType, sourceId: e.sourceId, sourceLabel: e.sourceLabel,
       }));
     }
