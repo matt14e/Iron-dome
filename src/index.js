@@ -211,7 +211,8 @@ app.get('/api/history', requirePassword, async (req, res) => {
   const dealId = String(req.query.dealId || '');
   if (!dealId) return res.status(400).json({ error: 'dealId required' });
   try {
-    const data = await getDealHistory(dealId, ['hubspot_owner_id', 'account_manager', 'bdr']);
+    const props = req.query.props ? String(req.query.props).split(',') : ['hubspot_owner_id', 'account_manager', 'bdr'];
+    const data = await getDealHistory(dealId, props);
     const h = data.propertiesWithHistory || {};
     const out = {};
     for (const k of Object.keys(h)) {
